@@ -55,6 +55,7 @@ public final class ServiceTaskElementTerminatingHandler<T extends ExecutableServ
     if (jobKey > 0) {
       final JobRecord job = jobState.getJob(jobKey);
 
+      // TODO (saig0): don't cancel the job if an error is thrown
       if (job != null) {
         context.getCommandWriter().appendFollowUpCommand(jobKey, JobIntent.CANCEL, job);
       } else {

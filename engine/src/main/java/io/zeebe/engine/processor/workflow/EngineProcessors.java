@@ -14,6 +14,7 @@ import io.zeebe.engine.processor.workflow.deployment.DeploymentEventProcessors;
 import io.zeebe.engine.processor.workflow.deployment.distribute.DeploymentDistributeProcessor;
 import io.zeebe.engine.processor.workflow.deployment.distribute.DeploymentDistributor;
 import io.zeebe.engine.processor.workflow.incident.IncidentEventProcessors;
+import io.zeebe.engine.processor.workflow.job.JobErrorThrownProcessor;
 import io.zeebe.engine.processor.workflow.job.JobEventProcessors;
 import io.zeebe.engine.processor.workflow.message.MessageEventProcessors;
 import io.zeebe.engine.processor.workflow.message.command.SubscriptionCommandSender;
@@ -22,8 +23,10 @@ import io.zeebe.engine.state.ZeebeState;
 import io.zeebe.engine.state.deployment.WorkflowState;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.protocol.Protocol;
+import io.zeebe.protocol.record.RecordType;
 import io.zeebe.protocol.record.ValueType;
 import io.zeebe.protocol.record.intent.DeploymentIntent;
+import io.zeebe.protocol.record.intent.JobIntent;
 import io.zeebe.util.sched.ActorControl;
 import java.util.function.Consumer;
 
@@ -58,8 +61,16 @@ public final class EngineProcessors {
     final BpmnStepProcessor stepProcessor =
         addWorkflowProcessors(
             zeebeState, typedRecordProcessors, subscriptionCommandSender, catchEventBehavior);
-    addIncidentProcessors(zeebeState, stepProcessor, typedRecordProcessors);
     addJobProcessors(zeebeState, typedRecordProcessors, onJobsAvailableCallback, maxFragmentSize);
+
+    // TODO (saig0): pass the job processor into the incident processor
+    final JobErrorThrownProcessor jobErrorThrownProcessor =
+        (JobErrorThrownProcessor)
+            typedRecordProcessors
+                .getRecordProcessorMap()
+                .get(RecordType.EVENT, ValueType.JOB, JobIntent.ERROR_THROWN.getIntent());
+    addIncidentProcessors(
+        zeebeState, stepProcessor, typedRecordProcessors, jobErrorThrownProcessor);
 
     return typedRecordProcessors;
   }
@@ -117,8 +128,10 @@ public final class EngineProcessors {
   private static void addIncidentProcessors(
       final ZeebeState zeebeState,
       final BpmnStepProcessor stepProcessor,
-      final TypedRecordProcessors typedRecordProcessors) {
-    IncidentEventProcessors.addProcessors(typedRecordProcessors, zeebeState, stepProcessor);
+      final TypedRecordProcessors typedRecordProcessors,
+      final JobErrorThrownProcessor jobErrorThrownProcessor) {
+    IncidentEventProcessors.addProcessors(
+        typedRecordProcessors, zeebeState, stepProcessor, jobErrorThrownProcessor);
   }
 
   private static void addJobProcessors(

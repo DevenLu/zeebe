@@ -22,6 +22,8 @@ import io.zeebe.protocol.record.intent.IncidentIntent;
 public final class CreateIncidentProcessor implements CommandProcessor<IncidentRecord> {
   public static final String NO_FAILED_RECORD_MESSAGE =
       "Expected to create incident for failed record with key '%d', but no such record was found";
+
+  // TODO (saig0): adjust rejection message
   public static final String JOB_NOT_FAILED_MESSAGE =
       "Expected to create incident for failed job with key '%d', but it is not failed";
   public static final String NO_FAILED_JOB_MESSAGE =
@@ -69,12 +71,13 @@ public final class CreateIncidentProcessor implements CommandProcessor<IncidentR
 
     if (jobState == State.NOT_FOUND) {
       commandControl.reject(RejectionType.NOT_FOUND, String.format(NO_FAILED_JOB_MESSAGE, jobKey));
-    } else if (jobState != State.FAILED) {
+    } else if (jobState != State.FAILED && jobState != State.ERROR_THROWN) {
       commandControl.reject(
           RejectionType.INVALID_STATE, String.format(JOB_NOT_FAILED_MESSAGE, jobKey));
     }
 
-    return jobState != State.FAILED;
+    // TODO (saig0): reject incident if job state is not FAILED or ERROR_THROWN
+    return jobState != State.FAILED && jobState != State.ERROR_THROWN;
   }
 
   private boolean rejectWorkflowInstanceIncident(

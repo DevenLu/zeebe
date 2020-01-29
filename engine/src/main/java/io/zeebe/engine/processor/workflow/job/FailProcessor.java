@@ -41,7 +41,7 @@ public final class FailProcessor implements CommandProcessor<JobRecord> {
       commandControl.reject(
           RejectionType.INVALID_STATE,
           String.format(NOT_ACTIVATED_JOB_MESSAGE, key, "must be activated first"));
-    } else if (jobState == State.FAILED) {
+    } else if (jobState == State.FAILED) { // TODO (saig0): check for ERROR_THROWN state
       commandControl.reject(
           RejectionType.INVALID_STATE,
           String.format(NOT_ACTIVATED_JOB_MESSAGE, key, "is marked as failed"));

@@ -16,6 +16,7 @@ import io.zeebe.protocol.record.Assertions;
 import io.zeebe.protocol.record.Record;
 import io.zeebe.protocol.record.intent.IncidentIntent;
 import io.zeebe.protocol.record.intent.JobIntent;
+import io.zeebe.protocol.record.value.BpmnElementType;
 import io.zeebe.protocol.record.value.ErrorType;
 import io.zeebe.protocol.record.value.IncidentRecordValue;
 import io.zeebe.test.util.record.RecordingExporter;
@@ -225,7 +226,6 @@ public final class ErrorEventIncidentTest {
     final var endEvent =
         RecordingExporter.workflowInstanceRecords()
             .withWorkflowInstanceKey(workflowInstanceKey)
-            .limitToWorkflowInstanceCompleted()
             .withElementType(BpmnElementType.END_EVENT)
             .getFirst();
 

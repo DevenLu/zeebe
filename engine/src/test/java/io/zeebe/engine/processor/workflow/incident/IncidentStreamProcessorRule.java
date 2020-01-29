@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 import io.zeebe.engine.processor.workflow.BpmnStepProcessor;
 import io.zeebe.engine.processor.workflow.CatchEventBehavior;
 import io.zeebe.engine.processor.workflow.WorkflowEventProcessors;
+import io.zeebe.engine.processor.workflow.job.JobErrorThrownProcessor;
 import io.zeebe.engine.processor.workflow.job.JobEventProcessors;
 import io.zeebe.engine.processor.workflow.message.command.SubscriptionCommandSender;
 import io.zeebe.engine.processor.workflow.timer.DueDateTimerChecker;
@@ -75,7 +76,7 @@ public final class IncidentStreamProcessorRule extends ExternalResource {
 
     environmentRule.startTypedStreamProcessor(
         (typedRecordProcessors, processingContext) -> {
-          this.zeebeState = processingContext.getZeebeState();
+          zeebeState = processingContext.getZeebeState();
           workflowState = zeebeState.getWorkflowState();
           final BpmnStepProcessor stepProcessor =
               WorkflowEventProcessors.addWorkflowProcessors(
@@ -85,7 +86,12 @@ public final class IncidentStreamProcessorRule extends ExternalResource {
                   new CatchEventBehavior(zeebeState, mockSubscriptionCommandSender, 1),
                   mockTimerEventScheduler);
 
-          IncidentEventProcessors.addProcessors(typedRecordProcessors, zeebeState, stepProcessor);
+          final var jobErrorThrownProcessor =
+              new JobErrorThrownProcessor(
+                  workflowState, zeebeState.getKeyGenerator(), zeebeState.getJobState());
+
+          IncidentEventProcessors.addProcessors(
+              typedRecordProcessors, zeebeState, stepProcessor, jobErrorThrownProcessor);
           JobEventProcessors.addJobProcessors(
               typedRecordProcessors, zeebeState, type -> {}, Integer.MAX_VALUE);
           return typedRecordProcessors;

@@ -46,6 +46,13 @@ public class JobErrorThrownProcessor implements TypedRecordProcessor<JobRecord> 
       final TypedStreamWriter streamWriter) {
 
     final var job = record.getValue();
+    final var jobKey = record.getKey();
+
+    processRecord(jobKey, job, streamWriter);
+  }
+
+  public void processRecord(
+      final long jobKey, final JobRecord job, final TypedStreamWriter streamWriter) {
     final var serviceTaskInstanceKey = job.getElementInstanceKey();
     final var serviceTaskInstance = elementInstanceState.getInstance(serviceTaskInstanceKey);
 
@@ -61,16 +68,10 @@ public class JobErrorThrownProcessor implements TypedRecordProcessor<JobRecord> 
         serviceTaskInstance.setJobKey(-1L);
         elementInstanceState.updateInstance(serviceTaskInstance);
 
-        // remove job from state
-        jobState.throwError(record.getKey(), job);
+        jobState.delete(jobKey, job);
 
       } else {
-        // TODO (saig0): update job state to 'error thrown'
-        // mark job as failed and create an incident
-        job.setRetries(0);
-        jobState.fail(record.getKey(), job);
-
-        raiseIncident(record.getKey(), job, streamWriter);
+        raiseIncident(jobKey, job, streamWriter);
       }
     }
   }
@@ -99,7 +100,6 @@ public class JobErrorThrownProcessor implements TypedRecordProcessor<JobRecord> 
         .setJobKey(key)
         .setVariableScopeKey(job.getElementInstanceKey());
 
-    // TODO (saig0): need a failed workflow instance record for the incident
     streamWriter.appendNewCommand(IncidentIntent.CREATE, incidentEvent);
   }
 }
